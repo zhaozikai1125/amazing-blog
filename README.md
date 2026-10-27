@@ -33,6 +33,16 @@ docs/                              # 发布说明
 python3 -m pip install -r requirements.txt
 ```
 
+## 本机预览
+
+在终端进入项目目录后运行：
+
+```bash
+./scripts/preview.sh
+```
+
+脚本会先构建合集首页和各篇文章，再启动本地 HTTP 服务。浏览器访问 `http://127.0.0.1:8765/`，从首页点文章卡片阅读。终端按 `Ctrl+C` 后预览服务会停止。
+
 ## 保存修改
 
 ```bash
