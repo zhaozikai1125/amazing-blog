@@ -1,0 +1,64 @@
+{
+  "source_revision": "423f5419ec94914b6644158fc0ea60ecbe6ab6d4",
+  "files": 316,
+  "bytes": 6442275967,
+  "formats": {
+    ".json": 116,
+    ".parquet": 87,
+    ".mp4": 84,
+    ".mcap": 29
+  },
+  "tasks": {
+    "Clean Desk Waste": {
+      "episodes": 20,
+      "frames": 31028,
+      "duration_s": 1044.7709271746353,
+      "files": 226,
+      "bytes": 5975497806,
+      "fps": [
+        25.0,
+        30.0,
+        30.001,
+        30.002,
+        30.003,
+        30.005
+      ]
+    },
+    "Fold Paper into a Triangle": {
+      "episodes": 1,
+      "frames": 746,
+      "duration_s": 24.866666666666667,
+      "files": 10,
+      "bytes": 52260106,
+      "fps": [
+        30.0
+      ]
+    },
+    "Pouring Water from Kettle into Cup": {
+      "episodes": 8,
+      "frames": 3311,
+      "duration_s": 110.36666666666666,
+      "files": 80,
+      "bytes": 414518055,
+      "fps": [
+        30.0
+      ]
+    }
+  },
+  "schema": {
+    "observation.state.hand_left_world": {
+      "dtype": "float32",
+      "shape": [
+        21,
+        3
+      ]
+    },
+    "observation.state.hand_left_world_rotation": {
+      "dtype": "float32",
+      "shape": [
+        21,
+        4
+      ]
+    }
+  }
+}

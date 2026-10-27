@@ -14,7 +14,7 @@ MP4 倒是认识，Parquet 和 MCAP 就陌生了。后来页面上显示出一�
 
 这篇文章就按当时折腾的顺序记下来。代码和部署是在 AI 辅助下完成的，从上传文件的查看器，慢慢改成了一个能看视频、查字段、播放手部姿态的教学页。中间碰到的概念，就在讲到相关文件时再解释。
 
-![这次项目的大致过程](../assets/00-cover.png)
+![这次项目的大致过程](assets/00-cover.png)
 
 ## 先下载三个任务，别把硬盘填满
 
@@ -37,7 +37,7 @@ EgoDemo 记录的是人做事的过程。摄像头从操作人的视角拍摄，
 
 这几个数字都是从下载清单核对的，另外保存的说明和许可证文件不算在 316 个任务文件里。按每段的帧数和帧率估算，29 段演示合起来约 19 分 40 秒。
 
-![三个任务的数量和容量](../assets/04-subset-scale.png)
+![三个任务的数量和容量](assets/04-subset-scale.png)
 
 这时碰到了第一个不太直观的地方：总共才 29 段演示，怎么有 316 个文件？
 
@@ -91,7 +91,7 @@ EgoDemo 记录的是人做事的过程。摄像头从操作人的视角拍摄，
 
 所以，即便都叫 Parquet，装的东西也可能不一样。`data/` 下的表在本次导出里是一帧一行，`meta/episodes/` 下的表概括的却是整段演示。光看扩展名还不够。
 
-![同一段演示的 LeRobot 和 MCAP 两种表示](../assets/02-file-map.png)
+![同一段演示的 LeRobot 和 MCAP 两种表示](assets/02-file-map.png)
 
 版本目录也有区别。本次子集里，`EgoStand` 提供头部视角和手部姿态，`EgoProStandard` 增加了腕部视角，带 `-body` 的版本还提供全身姿态。具体文件仍要逐段查看，比如这次折纸任务并没有这四个版本全部配齐。
 
@@ -163,7 +163,7 @@ print(feature_info["shape"])
 print(feature_info["names"])
 ```
 
-![21 个点与每个点的三个坐标](../assets/03-hand-tensor.png)
+![21 个点与每个点的三个坐标](assets/03-hand-tensor.png)
 
 `21×3` 的意思是每只手 21 个点，每个点三个位置数值。一只手共 63 个数，两只手共 126 个。
 
@@ -199,7 +199,7 @@ print(feature_info["names"])
 
 假设数据严格按每秒 30 帧采样，用帧号和帧率换算时间很方便。但这次核对元数据时，清理桌面的演示里既有 30.0，也有 25.0 和接近 30 的小数值。把每段都写死成 30 FPS，就会找错位置。
 
-![画面、姿态和文字需要按时间建立对应](../assets/05-time-alignment.png)
+![画面、姿态和文字需要按时间建立对应](assets/05-time-alignment.png)
 
 因此，查姿态时更合适的起点是表里的 `timestamp`。接着前面的读取代码，可以先找距离目标时刻最近的一行：
 
@@ -243,7 +243,7 @@ print("位置形状：", position.shape)
 
 画面里的手在动，观察角度和坐标网格也变，根本不方便比较前后位置。问题出在动画显示设置：当时固定了一部分轴范围，但每帧重绘时的场景参数还没有完整固定。
 
-![姿态播放时需要固定整个显示场景](../assets/06-fixed-scene.png)
+![姿态播放时需要固定整个显示场景](assets/06-fixed-scene.png)
 
 修改时，用整段动画的点确定统一的三轴范围，再固定轴比例和相机。每个动画帧沿用同一套相机位置、朝向和观察中心，只更新手部坐标。播放模式锁定视角，想自由旋转时再回到逐帧查看。
 
@@ -253,11 +253,11 @@ print("位置形状：", position.shape)
 
 下面这段 GIF 是为文章制作的合成示意，用来展示时间推进时怎样更新双手关键点和动作文字。它没有使用 EgoDemo 的真实轨迹，也不是模型输出。
 
-![合成双手姿态示意动画](../assets/08-pose-concept.gif)
+![合成双手姿态示意动画](assets/08-pose-concept.gif)
 
 <video controls preload="metadata" poster="assets/08-pose-concept-poster.png" style="width:100%;max-width:960px" src="assets/08-pose-concept.mp4"></video>
 
-[同内容的 MP4 视频](../assets/08-pose-concept.mp4)
+[同内容的 MP4 视频](assets/08-pose-concept.mp4)
 
 实际教学页支持暂停、进度条和 0.5／1／2 倍速。整段播放用了有限数量的姿态抽样，控制页面体积；要查某一帧，仍可以在逐帧模式查看原始采样。
 
@@ -296,11 +296,11 @@ print("位置形状：", position.shape)
 
 Observation 是系统当时能看到或读到的信息，例如摄像头画面、机器人当前关节状态。Action 是接下来让机器人执行的控制量，例如末端位移、关节目标、夹爪开合。执行以后环境变了，系统再获取新的观察，继续选择动作。
 
-![观察、动作与环境之间的循环](../assets/01-embodied-loop.png)
+![观察、动作与环境之间的循环](assets/01-embodied-loop.png)
 
 人手关键点记录了一种运动状态，但机械臂需要的控制量未必长这样。比如人用五根手指拿水壶，两指夹爪该怎么抓？人类世界坐标中的一个位置，换到机器人基座坐标下在哪里？机器人能否到达，会不会碰到桌子？这些问题都要另外解决。
 
-![人类数据到机器人执行之间的适配工作](../assets/07-human-to-robot.png)
+![人类数据到机器人执行之间的适配工作](assets/07-human-to-robot.png)
 
 VLA 就是 Vision、Language、Action，通常指根据视觉和任务语言生成动作的模型。这里最容易被略过的恰恰是最后的 Action：采用了 LeRobot 格式，并不代表已经有适合目标机器人的动作标签。
 
@@ -331,7 +331,7 @@ VLA 就是 Vision、Language、Action，通常指根据视觉和任务语言生�
 
 ## 用到的资料
 
-文章初稿整理于 2026 年 10 月 21 日，2026 年 10 月 27 日改写。容量、文件数和字段形状沿用本次下载核对的结果，不代表仓库之后的实时状态。汇总记录见配套的 [source_facts.json](../source_evidence/source_facts.json)。图解为本文制作，动画为合成示意。
+文章初稿整理于 2026 年 10 月 21 日，2026 年 10 月 27 日改写。容量、文件数和字段形状沿用本次下载核对的结果，不代表仓库之后的实时状态。汇总记录见配套的 [source_facts.json](source_evidence/source_facts.json)。图解为本文制作，动画为合成示意。
 
 - [EgoDemo 数据卡](https://huggingface.co/datasets/LightwheelAI/EgoDemo)
 - [EgoDemo GitCode 入口与使用条款](https://ai.gitcode.com/Lightwheel/EgoDemo)
