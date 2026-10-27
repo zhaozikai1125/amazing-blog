@@ -27,11 +27,14 @@ docs/                              # 发布说明
 4. 运行 `python3 scripts/build.py`，更新合集首页、各篇 HTML 阅读页和 `dist/` 发布包。
 5. 用浏览器打开 `site/index.html` 预览所有文章。
 
-首次构建前安装依赖：
+首次使用时，在项目目录创建独立 Python 环境并安装依赖：
 
 ```bash
-python3 -m pip install -r requirements.txt
+python3 -m venv .venv
+.venv/bin/python -m pip install -r requirements.txt
 ```
+
+后续运行预览脚本时会自动使用这个环境。
 
 ## 本机预览
 
