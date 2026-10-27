@@ -1,60 +1,49 @@
 # amazing-blog
 
-个人 Blog 文章合集
+个人 Blog 文章合集。每篇文章单独管理正文、图片、视频和资料；合集首页会自动收录各篇文章。
 
-这个仓库用来长期收集和发布多篇博客文章。每篇文章、它自己的图片与视频、阅读页和发布包都按文章分开管理。现在收录的第一篇是 EgoDemo 学习记录；之后可以继续添加其他主题。
+目前包含 EgoDemo 学习记录和 FineVLA 项目调研，后续可以继续添加其他主题。
 
-## 项目结构
+## 目录结构
 
 ```text
 articles/
-├── _template/                    # 新文章模板
-└── egodemo-learning-log/
-    ├── article.json               # 标题、日期、摘要、标签
-    ├── index.md                   # Markdown 正文
-    ├── assets/                    # 这篇文章自己的图片、GIF、视频
-    └── source_evidence/           # 支撑文中数据的资料
+├── _template/                     # 新文章模板
+├── egodemo-learning-log/           # EgoDemo 学习记录
+└── FineVLA/                        # FineVLA 项目调研
+    ├── article.json                # 标题、日期、摘要和标签
+    ├── index.md                    # Markdown 正文
+    └── assets/                     # 该文章专用图片和视频
 site/
-├── index.html                     # 全部文章的合集首页
-└── egodemo-learning-log/index.html
-scripts/build.py                   # 生成首页、单篇页面和发布包
-docs/                              # 发布说明
+├── index.html                      # 全部文章的合集首页
+└── <文章目录>/index.html           # 单篇阅读页
+scripts/
+├── build.py                        # 构建首页、阅读页和文章发布包
+└── preview.sh                      # 启动本地预览
+启动博客.command                    # macOS 双击启动入口
+docs/                               # 新增和发布文章说明
 ```
 
-## 新增一篇文章
+## 一键预览
 
-1. 复制 `articles/_template/`，把副本改成简短英文目录名，例如 `robotics-notes`。
-2. 编辑该目录下的 `article.json`，填写标题、日期、摘要和标签。
-3. 编辑 `index.md` 写正文，图片、GIF 和视频放进自己的 `assets/`，用相对路径引用。
-4. 运行 `python3 scripts/build.py`，更新合集首页、各篇 HTML 阅读页和 `dist/` 发布包。
-5. 用浏览器打开 `site/index.html` 预览所有文章。
+macOS 上双击 `启动博客.command`。首次运行会在项目内创建 `.venv` 并安装构建依赖，然后生成页面、启动本机预览并打开浏览器。预览地址是 <http://127.0.0.1:8765/>。停止时，在弹出的终端窗口按 `Ctrl+C`。
 
-首次使用时，首次启动时，`启动博客.command` 会自动创建项目专用 Python 环境并安装依赖。也可以手动提前安装：
+也可以在终端运行 `./scripts/preview.sh`。
 
-```bash
-python3 -m venv .venv
-.venv/bin/python -m pip install -r requirements.txt
-```
+## 新增文章
 
-后续运行预览脚本时会自动使用这个环境。
-
-## 本机预览
-
-在终端进入项目目录后运行：
-
-```bash
-./scripts/preview.sh
-```
-
-脚本会先构建合集首页和各篇文章，再启动本地 HTTP 服务。浏览器访问 `http://127.0.0.1:8765/`，从首页点文章卡片阅读。终端按 `Ctrl+C` 后预览服务会停止。
+1. 复制 `articles/_template/`，改成新的文章目录名，例如 `robotics-notes`。
+2. 编辑 `article.json`，填写文章标题、日期、摘要和标签。
+3. 编辑 `index.md` 写正文，图片和视频放在该篇的 `assets/` 目录下。
+4. 重新运行 `./scripts/preview.sh`。新文章会出现在合集首页。
 
 ## 保存修改
 
 ```bash
 git status
 git diff
-git add articles site docs scripts README.md requirements.txt .gitignore
+git add articles site docs scripts README.md requirements.txt .gitignore "启动博客.command"
 git commit -m "说明这次改了什么"
 ```
 
-Git 目前只在本机记录版本，仓库尚未连接 GitHub、GitLab 等远程服务。
+GitHub 远程仓库：<https://github.com/zhaozikai1125/amazing-blog>
