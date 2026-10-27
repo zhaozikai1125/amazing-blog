@@ -27,7 +27,7 @@ docs/                              # 发布说明
 4. 运行 `python3 scripts/build.py`，更新合集首页、各篇 HTML 阅读页和 `dist/` 发布包。
 5. 用浏览器打开 `site/index.html` 预览所有文章。
 
-首次使用时，在项目目录创建独立 Python 环境并安装依赖：
+首次使用时，首次启动时，`启动博客.command` 会自动创建项目专用 Python 环境并安装依赖。也可以手动提前安装：
 
 ```bash
 python3 -m venv .venv
