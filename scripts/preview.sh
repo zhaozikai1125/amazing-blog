@@ -19,5 +19,25 @@ if ! "$PYTHON" -c 'import markdown' >/dev/null 2>&1; then
 fi
 
 "$PYTHON" scripts/build.py
-printf '\n博客已在本机预览： http://127.0.0.1:8765/\n浏览器打开上方地址。按 Ctrl+C 停止预览。\n\n'
-exec "$PYTHON" -m http.server 8765 --bind 127.0.0.1 --directory site
+URL=http://127.0.0.1:8765/
+
+if "$PYTHON" -c 'from urllib.request import urlopen; urlopen("http://127.0.0.1:8765/", timeout=1).read(1)' >/dev/null 2>&1; then
+    echo "预览服务已经运行，将打开 $URL"
+else
+    "$PYTHON" -m http.server 8765 --bind 127.0.0.1 --directory site &
+    SERVER_PID=$!
+    trap 'kill "$SERVER_PID" 2>/dev/null || true' EXIT INT TERM
+    sleep 1
+    echo "博客预览已启动：$URL"
+    echo "保持此窗口打开；关闭预览时按 Ctrl+C。"
+fi
+
+if command -v open >/dev/null 2>&1; then
+    open "$URL"
+else
+    echo "请在浏览器中打开：$URL"
+fi
+
+if [ "${SERVER_PID:-}" ]; then
+    wait "$SERVER_PID"
+fi
