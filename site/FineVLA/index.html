@@ -1,0 +1,371 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="梳理 FineVLA 的细粒度过程指令、数据处理流程、评测基准与策略实验；文中已标出的数据差异仍需对照论文原文确认。"><title>FineVLA 项目调研报告</title><style>
+:root{--ink:#20343c;--muted:#657a80;--accent:#008f83;--line:#dce5e3;--bg:#f4f7f5}
+*{box-sizing:border-box}html{scroll-behavior:smooth;scroll-padding-top:24px}body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.9 -apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif}a{color:#007c73;text-decoration:none}a:hover{text-decoration:underline}header{background:#17343d;color:#fff;padding:34px max(6vw,24px)}header p{margin:0;letter-spacing:.1em;font-size:13px;color:#b9d7d3}header strong{display:block;font-size:25px;margin:8px 0}header span{font-size:14px;color:#d1e3df}.layout{display:grid;grid-template-columns:265px minmax(0,940px);gap:34px;max-width:1300px;margin:32px auto;padding:0 24px}aside{position:sticky;top:20px;align-self:start;max-height:94vh;overflow:auto;font-size:13px;line-height:1.65;padding:18px 12px;background:#fff;border:1px solid var(--line);border-radius:12px}aside ul{list-style:none;margin:0;padding-left:12px}aside>div>ul{padding:0}aside li{margin:9px 0}aside ul ul{border-left:1px solid var(--line);font-size:12px}article{min-width:0;padding:38px 44px;background:#fff;border:1px solid var(--line);border-radius:16px}h1{font-size:31px;line-height:1.5;margin:0 0 22px}h2{font-size:25px;line-height:1.55;margin:52px 0 18px;padding-top:8px}h3{font-size:20px;margin:30px 0 12px}p{margin:16px 0}li{margin:6px 0}strong{color:#153f45}blockquote{margin:22px 0;padding:8px 20px;border-left:4px solid var(--accent);background:#eff7f4;font-size:15px}img,video{display:block;max-width:100%;height:auto;margin:24px auto;border-radius:10px;border:1px solid #e6ece9}pre{overflow:auto;background:#17343d;color:#e8f3ef;border-radius:10px;padding:20px;font:13px/1.8 ui-monospace,SFMono-Regular,Consolas,monospace}code{background:#edf3f1;border-radius:4px;padding:2px 5px;font-size:.88em;overflow-wrap:anywhere}pre code{padding:0;background:none;font-size:inherit;overflow-wrap:normal}table{display:block;overflow:auto;width:100%;border-collapse:collapse;font-size:14px;margin:24px 0}th,td{border:1px solid var(--line);padding:10px 13px;min-width:100px;text-align:left}th{background:#eaf3ef}tr:nth-child(even){background:#f8faf9}hr{border:0;border-top:1px solid var(--line);margin:40px 0}footer{text-align:center;color:var(--muted);font-size:13px;margin:28px 20px 40px}.toplink{display:inline-block;margin:10px 0}
+@media(max-width:1000px){.layout{display:block;max-width:880px}aside{position:static;max-height:360px;margin-bottom:24px}aside ul ul{display:none}article{padding:28px}}@media(max-width:600px){body{font-size:16px}.layout{padding:0 12px;margin:16px auto}article{padding:22px 18px}h1{font-size:25px}h2{font-size:22px}pre{padding:14px;font-size:12px}header{padding:24px}header strong{font-size:21px}}@media print{header,aside,footer{display:none}.layout{display:block;margin:0;padding:0}article{border:0;padding:0}body{background:#fff}h2,h3{break-after:avoid}img,table,pre{break-inside:avoid}a{color:inherit}}
+</style></head>
+<body id="top"><header><p>个人 Blog · 学习记录</p><strong>FineVLA 项目调研报告</strong><span>2026-10-27</span></header>
+<div class="layout"><aside aria-label="文章目录"><b>文章目录</b><div class="toc">
+<ul>
+<li><a href="#_1">一、一句话概述</a></li>
+<li><a href="#_2">二、研究背景与动机</a><ul>
+<li><a href="#21-vla">2.1 现有 VLA 的"听话"困境</a></li>
+<li><a href="#22">2.2 三个核心挑战</a></li>
+</ul>
+</li>
+<li><a href="#_3">三、整体架构：数据—模型—评测—策略闭环</a></li>
+<li><a href="#_4">四、四大核心组件</a><ul>
+<li><a href="#41-finevla-tool-97">4.1 FineVLA-Tool：从 97 万条轨迹到细粒度数据</a></li>
+<li><a href="#42-robofine-bench">4.2 RoboFine-Bench：细粒度动作理解基准</a></li>
+<li><a href="#43-robofine-vlm">4.3 RoboFine-VLM：机器人专用的可扩展标注器</a></li>
+<li><a href="#44-finevla-policy">4.4 FineVLA-Policy：可控策略训练</a></li>
+</ul>
+</li>
+<li><a href="#_5">五、实验结果</a><ul>
+<li><a href="#51-robofine-vlm-sota">5.1 RoboFine-VLM 在基准上达到 SOTA</a></li>
+<li><a href="#52-u">5.2 仿真：倒 U 型的"黄金混合比"</a></li>
+<li><a href="#53">5.3 真机：因子级可控性</a></li>
+<li><a href="#54">5.4 三个消融发现</a></li>
+</ul>
+</li>
+<li><a href="#_6">六、贡献总结</a></li>
+<li><a href="#_7">七、局限性与未来方向</a></li>
+<li><a href="#_8">八、应用价值与落地场景</a></li>
+<li><a href="#_9">九、快速上手建议</a></li>
+<li><a href="#_10">十、待核实项（建议对照论文原文确认）</a></li>
+</ul>
+</div>
+<a class="toplink" href="#top">↑ 回到顶部</a><p><a href="../index.html">← 全部文章</a></p></aside><article><h1 id="finevla">FineVLA 项目调研报告</h1>
+<blockquote>
+<p><strong>FineVLA：面向可操控视觉-语言-动作策略的细粒度指令对齐</strong>
+Fine-Grained Instruction Alignment for Steerable Vision-Language-Action Policies</p>
+<p>出品方：香港大学 XLANG Lab × 阿里巴巴 Qwen Team
+项目主页：https://finevla.xlang.ai/
+报告日期：2026-10-27
+说明：本文基于公开报道与项目页面信息整理，部分数值在不同信源中存在出入（见文末「待核实项」），请以论文原文与官方仓库为准。</p>
+</blockquote>
+<hr />
+<h2 id="_1">一、一句话概述</h2>
+<p>FineVLA 是由港大 XLANG Lab 与阿里 Qwen 团队联合推出的开源框架，旨在解决 VLA（视觉-语言-动作）模型"语言监督粒度太粗"的长期痛点。它不追求更大的模型，而是从数据层入手，将 10 个开源数据集的约 97 万条异构轨迹压缩、清洗并标注为 4.7 万条"过程级"细粒度指令，进而训练出能听懂"用哪只手、从哪边接近、抓哪个部位"的可控策略。框架包含数据工具、评测基准、专用 VLM 标注器与策略训练四部分，代码、模型与基准均已开源。</p>
+<h2 id="_2">二、研究背景与动机</h2>
+<h3 id="21-vla">2.1 现有 VLA 的"听话"困境</h3>
+<p>当前 VLA 模型已能根据自然语言完成抓取、放置等任务，但语言监督通常只到<strong>目标级（goal-level）</strong>：</p>
+<table>
+<thead>
+<tr>
+<th>场景</th>
+<th>数据集常见标注</th>
+<th>缺失的执行细节</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>拿勺子</td>
+<td>"拿起勺子"</td>
+<td>左臂还是右臂、绕障还是直线</td>
+</tr>
+<tr>
+<td>抓杯子</td>
+<td>"把杯子拿过来"</td>
+<td>抓杯身还是杯柄、从上抓还是侧抓</td>
+</tr>
+<tr>
+<td>装配</td>
+<td>"装上零件"</td>
+<td>接近角度、接触部位、旋转方向</td>
+</tr>
+</tbody>
+</table>
+<p>同一任务的多条轨迹往往共享同一条指令，造成<strong>监督歧义</strong>：模型能学到"要成功"，却学不到"怎么成功"。相比之下，图像/视频生成领域早已证明细节描述直接决定可控性，而机器人策略学习长期缺少对应的基础设施。</p>
+<h3 id="22">2.2 三个核心挑战</h3>
+<ol>
+<li><strong>缺基础设施</strong>：没有从异构数据到细粒度标注的统一工具链，各团队重复造轮子；</li>
+<li><strong>缺评测与标注器</strong>：缺少衡量机器人细粒度视频理解的基准，也缺少低成本可扩展的自动标注器；</li>
+<li><strong>缺系统性证据</strong>：细粒度语言是否真的提升策略学习、如何与原指令混合最优，此前缺乏受控实验。</li>
+</ol>
+<p>FineVLA 逐一回应了这三点。</p>
+<h2 id="_3">三、整体架构：数据—模型—评测—策略闭环</h2>
+<pre><code>                    ┌──► RoboFine-Bench（评测基准）
+FineVLA-Tool ──► FineVLA-Data ──┤
+（数据流水线）   （47K 细粒度指令）├──► RoboFine-VLM（可扩展标注器）
+                                 │
+                                 └──► FineVLA-Policy（可控 VLA 策略）
+                                              │
+                              RoboTwin 仿真 + Cobot Magic 真机双臂
+</code></pre>
+<p>核心理念：<strong>语言监督既要指定"做什么"，也要指明"怎么做"</strong>；且二者不是替代关系，而是互补关系。</p>
+<h2 id="_4">四、四大核心组件</h2>
+<h3 id="41-finevla-tool-97">4.1 FineVLA-Tool：从 97 万条轨迹到细粒度数据</h3>
+<p>四阶段流水线：</p>
+<table>
+<thead>
+<tr>
+<th>阶段</th>
+<th>内容</th>
+<th>关键处理</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>S1 收集与格式转换</td>
+<td>汇聚 BridgeData-V2、DROID、BC-Z、RT-1、RoboMIND 等 <strong>10 个开源数据集共 972,247 条轨迹</strong></td>
+<td>统一转换为 LeRobot 2.1 格式</td>
+</tr>
+<tr>
+<td>S2 规范化与清洗</td>
+<td>动作-状态表示统一</td>
+<td>全部转为<strong>绝对坐标 + 归一化四元数</strong>旋转；DTW 距离门控剔除损坏/不一致轨迹</td>
+</tr>
+<tr>
+<td>S3 聚类与采样</td>
+<td>去冗余</td>
+<td>基于 <strong>DTW 计算轨迹相似度 + 层次聚类</strong>，逐簇选取代表样本；972K → <strong>47,159 条</strong>，冗余降低约 95%，保留策略多样性</td>
+</tr>
+<tr>
+<td>S4 十维细粒度标注</td>
+<td>步骤级描述生成</td>
+<td>先由 Qwen3.5-Plus 生成，再经<strong>人工审核验证</strong>，产出 FineVLA-Data</td>
+</tr>
+</tbody>
+</table>
+<p><strong>十维标注模式（10-D Schema）</strong> 覆盖操作的关键执行因素：动作序列、主动执行者（左/右臂）、目标物体、初始/最终配置、接触与接近方式、轨迹与朝向、物体交互、失败与恢复、本体运动等。</p>
+<p>效果：平均指令长度由 <strong>9.3 词 → 96.8 词，信息密度提升 10.4 倍</strong>。</p>
+<blockquote>
+<p>这一设计的巧妙之处：DTW 聚类去重大幅降低了后续人工标注成本，使"高质量细粒度标注"在工程上变得可行。</p>
+</blockquote>
+<h3 id="42-robofine-bench">4.2 RoboFine-Bench：细粒度动作理解基准</h3>
+<table>
+<thead>
+<tr>
+<th>项目</th>
+<th>规格</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>视频数</td>
+<td>500 段（来自 10 个数据集）</td>
+</tr>
+<tr>
+<td>机器人形态</td>
+<td>覆盖 32 种 embodiment</td>
+</tr>
+<tr>
+<td>原子事实</td>
+<td>约 1.08 万～1.16 万条人工审核事实（各样本平均约 4.3 步）</td>
+</tr>
+<tr>
+<td>数据隔离</td>
+<td>与训练集<strong>严格不重叠</strong></td>
+</tr>
+<tr>
+<td>VQA 轨道</td>
+<td>1,030 题，覆盖 10 个维度，聚合为三轴：实体与场景定位（Grounding）、动作与运动理解（Action）、交互与状态推理（State）</td>
+</tr>
+<tr>
+<td>Caption 轨道</td>
+<td>生成步骤级细粒度描述，由 LLM 评判一致性 / 覆盖率 / 反幻觉；分 <strong>Easy</strong>（提供原任务指令）与 <strong>Hard</strong>（仅凭视觉推理）两模式</td>
+</tr>
+</tbody>
+</table>
+<p>Easy/Hard 双模式的设计用于区分模型是"真正理解了执行过程"还是"依赖语言先验"。</p>
+<h3 id="43-robofine-vlm">4.3 RoboFine-VLM：机器人专用的可扩展标注器</h3>
+<p>通用 VLM 常遗漏接触区域、运动路径、物体歧义区分等执行细节。为此作者在 FineVLA-Data 上做全参数微调：</p>
+<table>
+<thead>
+<tr>
+<th>配置项</th>
+<th>参数</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>基座</td>
+<td>Qwen3.5-VL-397B-A17B</td>
+</tr>
+<tr>
+<td>微调方式</td>
+<td>全参数监督微调</td>
+</tr>
+<tr>
+<td>训练数据</td>
+<td>47,159 条人工验证的视频-指令对</td>
+</tr>
+<tr>
+<td>硬件</td>
+<td>256 × H200，全局 batch 512</td>
+</tr>
+<tr>
+<td>学习率</td>
+<td>7e-6 → 7e-7 线性衰减</td>
+</tr>
+<tr>
+<td>耗时</td>
+<td>约 40 小时</td>
+</tr>
+</tbody>
+</table>
+<p>输出为<strong>与动作时序对齐的步骤级描述</strong>，覆盖全部 10 个控制维度，可直接作为未来新轨迹的自动标注器。</p>
+<blockquote>
+<p><strong>重要说明</strong>：<strong>所有策略实验使用的细粒度监督均来自人工验证标注，而非 RoboFine-VLM 生成</strong>。该模型定位为"未来数据扩增工具"，其质量在 RoboFine-Bench 上独立评估。</p>
+</blockquote>
+<h3 id="44-finevla-policy">4.4 FineVLA-Policy：可控策略训练</h3>
+<p><strong>骨干与解码器</strong>：以 Qwen3.5-4B 为视觉-语言骨干，采用 StarVLA 代码库的两种动作头：</p>
+<ul>
+<li><strong>StarVLA-OFT</strong>：轻量 MLP 回归头，L1 损失并行预测连续动作片段；</li>
+<li><strong>StarVLA-GR00T</strong>：双系统架构，VL 主干作 System 2，DiT 流匹配模块作 System 1。</li>
+</ul>
+<p><strong>核心实验设计</strong>：保持轨迹、动作、视觉观测完全不变，<strong>只改变与每条轨迹配对的指令</strong>，从而隔离出语言监督类型的纯效应。通过控制 FG（细粒度）与 Raw（原始目标级）在每个训练步的采样概率，扫描混合比例。</p>
+<p>训练规模：预训练 100k 步 / 64×A100（batch 512），RoboTwin 微调 8×A100。</p>
+<h2 id="_5">五、实验结果</h2>
+<h3 id="51-robofine-vlm-sota">5.1 RoboFine-VLM 在基准上达到 SOTA</h3>
+<table>
+<thead>
+<tr>
+<th>指标</th>
+<th>RoboFine-VLM</th>
+<th>次优基线</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>VQA 整体准确率</td>
+<td><strong>71.0%</strong></td>
+<td>Gemini-3.1-Pro 62.1% / GPT-5.4 61.0%</td>
+</tr>
+<tr>
+<td>其中"动作与运动理解"</td>
+<td>68.4%</td>
+<td>58.4%</td>
+</tr>
+<tr>
+<td>Caption Easy Overall</td>
+<td>88.0%</td>
+<td>GPT-5.4 85.2%</td>
+</tr>
+<tr>
+<td>Caption Hard Overall</td>
+<td><strong>83.6%</strong></td>
+<td>GPT-5.4 78.1%</td>
+</tr>
+</tbody>
+</table>
+<p>自动评分与 10 位人类评分者排序的 Pearson 相关性 &gt; 0.97，说明 LLM-as-a-judge 评估可靠。</p>
+<h3 id="52-u">5.2 仿真：倒 U 型的"黄金混合比"</h3>
+<p>AlohaMix-OFT 在 RoboTwin 上的表现（FG:Raw 比例）：</p>
+<table>
+<thead>
+<tr>
+<th>FG:Raw</th>
+<th>Easy</th>
+<th>Hard</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Raw-only (0)</td>
+<td>71.8%</td>
+<td>71.4%</td>
+</tr>
+<tr>
+<td>1:2</td>
+<td>↑</td>
+<td>↑</td>
+</tr>
+<tr>
+<td><strong>1:1（最佳）</strong></td>
+<td><strong>86.8% (+15.0)</strong></td>
+<td><strong>82.5% (+11.1)</strong></td>
+</tr>
+<tr>
+<td>FG-only</td>
+<td>78.4%</td>
+<td>76.1%</td>
+</tr>
+<tr>
+<td>2:1 / 4:1</td>
+<td>回落</td>
+<td>回落</td>
+</tr>
+</tbody>
+</table>
+<p>三种设置（RDT-OFT、RDT-GR00T、AlohaMix-OFT）、跨架构与跨数据规模均呈现一致的<strong>倒 U 型曲线</strong>，峰值落在 FG 占比 33%～50% 区间。</p>
+<h3 id="53">5.3 真机：因子级可控性</h3>
+<p>在 Cobot Magic 桌面双臂平台上构造指令敏感任务（同一视觉场景下仅改变语言中的一个控制因素：颜色/姿态/接近方向/旋转方向/手臂选择）：</p>
+<ul>
+<li>FG:Raw=1:1 平均得分 <strong>62.7/100</strong>，Raw-only 仅 <strong>49.9</strong>；</li>
+<li>单因子增益最大者：<strong>姿态 +23、颜色 +18、接近方向 +18</strong>——恰好是原始指令完全不提供的维度；</li>
+<li>OOD 组合（如训练中未出现的"左手操作右侧目标"）：Raw-only 得 0，混合后提升至 5～10/10，显示出<strong>因子级泛化</strong>能力。</li>
+</ul>
+<p>成对对比可视化显示，模型能准确识别并执行仅由单一语言因素差异驱动的不同行为（顺时针/逆时针旋转、上抓/右抓、左手/右手等）。</p>
+<h3 id="54">5.4 三个消融发现</h3>
+<ol>
+<li><strong>细粒度监督缩小架构差距</strong>：RDT 上 OFT 与 GR00T 的差距由 Raw-only 的 6.4/6.6 缩小至 FG-only 的 0.8/0.5，说明密集语言监督缓解了监督瓶颈，降低了对动作头设计的敏感度。</li>
+<li><strong>FG 在更大数据上获益更多</strong>：从 RDT 到 AlohaMix（约 13× 数据），FG-only 相对 Raw-only 的增益由 +1.4/+2.0 升至 +6.5/+4.7，表明细粒度是可扩展的监督维度。</li>
+<li><strong>倒 U 型机理</strong>：Raw 提供紧凑的任务语义（做什么），FG 提供执行约束（怎么做）。纯 Raw 缺指导，纯 FG 可能削弱对紧凑任务表达的泛化，适度混合两者兼顾。</li>
+</ol>
+<h2 id="_6">六、贡献总结</h2>
+<ol>
+<li><strong>首个完整的可控 VLA 开源闭环</strong>：涵盖数据构建工具、细粒度基准、可扩展标注器与可控策略配方，且全部开源。</li>
+<li><strong>FineVLA-Data</strong>：972K 异构轨迹 → 47K 人工验证的十维过程级指令，信息密度提升 10.4 倍，为社区提供了可直接复用的高质量语料。</li>
+<li><strong>RoboFine-Bench</strong>：500 视频 / 32 形态 / 万级原子事实，训练-测试严格隔离，填补了细粒度机器人视频理解评测的空白。</li>
+<li><strong>实证结论</strong>：细粒度监督不损害任务成功率且与之互补；最佳混合比 FG:Raw ≈ 1:1～1:2；细粒度语言可直接转化为因子级可控性与一定的组合泛化。</li>
+</ol>
+<h2 id="_7">七、局限性与未来方向</h2>
+<table>
+<thead>
+<tr>
+<th>局限</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>验证范围有限</td>
+<td>真机仅限桌面双臂平台与少量定向任务，更多具身形态待验证</td>
+</tr>
+<tr>
+<td>组合泛化仍弱</td>
+<td>OOD 的 actor-target 绑定成功率仅 0～10/10</td>
+</tr>
+<tr>
+<td>人在回路未消除</td>
+<td>RoboFine-VLM 仍需人工验证环节</td>
+</tr>
+<tr>
+<td>安全性缺失</td>
+<td>细粒度指令遵循缺少可行性与安全校验机制</td>
+</tr>
+<tr>
+<td>算力门槛高</td>
+<td>预训练 64×A100×48h、微调 8×A100×48h、VLM 训练 256×H200×40h，属实验室级投入</td>
+</tr>
+</tbody>
+</table>
+<p>未来方向：提升组合泛化能力、扩展到更多形态（含人形与移动操作）、集成安全约束与可行性检查、探索端到端联合优化及跨领域泛化。</p>
+<h2 id="_8">八、应用价值与落地场景</h2>
+<ul>
+<li><strong>工业精密装配</strong>：指定工具使用顺序、接近角度与接触部位；</li>
+<li><strong>物流仓储</strong>：多品类抓取时约束接触点与抓取姿态；</li>
+<li><strong>医疗辅助</strong>：器械传递中指定交接手与交接姿态；</li>
+<li><strong>服务与人机协作</strong>：复杂场景下的递送与交互，支持自然语言的细节级指令；</li>
+<li><strong>数据工程侧</strong>：FineVLA-Tool 流水线与 RoboFine-VLM 标注器可迁移至任意自有遥操作数据集，显著降低细粒度标注成本。</li>
+</ul>
+<h2 id="_9">九、快速上手建议</h2>
+<ol>
+<li>访问项目主页 https://finevla.xlang.ai/ 获取论文、代码与模型链接；</li>
+<li>若已有遥操作数据：优先跑通 <strong>FineVLA-Tool</strong> 的格式统一与 DTW 去重流程，再按需接入十维标注；</li>
+<li>若关注策略效果：从 <strong>FG:Raw = 1:1</strong> 起步做基线，再向 1:2 方向扫描，避免直接使用 FG-only；</li>
+<li>若需评测细粒度理解能力：使用 <strong>RoboFine-Bench</strong> 的 Easy/Hard 双模式，Hard 模式更能反映真实理解水平；</li>
+<li>资源受限时：可只使用开源的 FineVLA-Data 与基准，不必复现 RoboFine-VLM 的全参数微调。</li>
+</ol>
+<h2 id="_10">十、待核实项（建议对照论文原文确认）</h2>
+<ul>
+<li>arXiv 编号与 GitHub 仓库地址（本文检索未获得稳定链接）；</li>
+<li>RoboFine-Bench 原子事实数量（10,816 / 11,631 两种表述并存）；</li>
+<li>RoboFine-VLM 的 VQA 准确率（68.2% / 71.0% 两种表述并存）；</li>
+<li>10 个源数据集的完整名单及各集轨迹分布；</li>
+<li>十维标注模式的完整官方命名与定义；</li>
+<li>许可证类型与模型权重下载方式。</li>
+</ul></article></div>
+<footer>图片与动画为原创教学示意。动画采用合成数据，非 EgoDemo 原始采集或模型预测。</footer></body></html>
